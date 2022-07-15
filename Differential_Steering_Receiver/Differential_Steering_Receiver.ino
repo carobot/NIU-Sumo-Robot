@@ -57,7 +57,7 @@ void right(){
      digitalWrite(motorB1A,HIGH); //B backward
      digitalWrite(motorB1B,LOW);
 
-     mSpeedA=(250./508.)*(axisdata[0])-255.;
+     mSpeedA=(250.0f/508.0f) * (axisdata[0]) - 255.0f;
      analogWrite(motorA1A ,0);
      analogWrite(motorA1B ,mSpeedA);
 
@@ -91,7 +91,22 @@ void brake(){
      digitalWrite(motorB1B,LOW);
 }
 
+void setup () {
+     pinMode(motorA1A, OUTPUT);
+     pinMode(motorA1B, OUTPUT);
+     pinMode(motorB1A, OUTPUT);
+     pinMode(motorB1B, OUTPUT);
 
+     Serial.begin(9600);
+     radio.begin();
+     //Serial.println("TEST nRF24L01+ receiver");
+     radio.openReadingPipe(0, address);
+     radio.setPALevel(RF24_PA_MIN);
+     radio.startListening();
+     //radio.setChannel(76);
+     
+
+}
  
 
 void loop() {

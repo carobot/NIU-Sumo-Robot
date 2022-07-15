@@ -1,3 +1,5 @@
+// transmitter code must standardise radio communication to 0 = neutral, +/- 512 in cardinal directions
+
 #include <Arduino.h>
 #include <SPI.h>
 #include <RF24.h>
