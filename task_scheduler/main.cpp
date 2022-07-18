@@ -4,18 +4,19 @@
 #include <stdlib.h>
 #include <ctime>
 
-#define POLL_RATE_MS 1000
+#define CLOCK_RATE 133333 // target cycle gaps between starts
 #define INITIAL_TASKS 5
 
 // Errors:
 // 69: bad pointer assignment
 
 struct Task {
-    void (*target)(int);
+    void (*target)(int); // pointer to component interface code
     int pid;
-    unsigned char priority; // range of 0-255, where 255 is the lowest
-    unsigned long last_active;
+    unsigned char priority; // range of 0-255, where 255 is the lowest and 0 is urgent - 0 will lock thread
+    unsigned long last_active; // last start point of component
     unsigned long preferred_rate; // optimal rate of execution, ms
+    unsigned long predicted_runtime; // an estimated time, as project components have mostly fixed runtimes
 };
 
 Task ** tasks;
@@ -39,11 +40,24 @@ void dummy1 (int var) {
     return;
 }
 
+void run (struct Task * target) {
+    target->last_active = std::clock();
+    printf("Task run: PID%d\n", target->pid);
+    // run task
+    target->target(0); // run target task
+}
+
 int main () { // place code into setup() and loop() when finished
     
 
     { // emulate Arduino setup() ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         printf("Emulating Arduino setup()\n");
+
+        // Arduino pin setups go here ~~~vvv~~~
+
+        // various setups for robot components go here ~~~vvv~~~
+
+
         tasks = (Task**)malloc(INITIAL_TASKS * sizeof(Task));
         if (tasks == nullptr) { printf("Bad pointer assignment.\n"); return (69); }
 
@@ -57,8 +71,13 @@ int main () { // place code into setup() and loop() when finished
             temp_task->target = dummy1;
             temp_task->pid = i;
             temp_task->priority = 0;
-            temp_task->last_active = std::clock(); // set to initial clock
-            temp_task->preferred_rate = 16U;
+            //temp_task->preferred_rate = 16U; // use CLOCK_RATE for preferred frequency
+
+            int start = std::clock();
+            dummy1(-1);
+            temp_task->predicted_runtime = std::clock() - start;
+            temp_task->last_active = start;
+
 
             tasks[i] = temp_task; temp_task = nullptr;
             printf("Task %d added to stack:\n", i+1);
@@ -66,7 +85,13 @@ int main () { // place code into setup() and loop() when finished
     }
     printf("Emulating Arduino loop\n");
     while (1) { // emulate Arduino loop() ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        
+        struct Task next;
+        long next_target_start = std::clock(); // desired start cycle by highest priority task
+        long next_target_end = 0; // estimated end time, if matching priorities, decide by end time
+
+        for (int i = 0; i < active_tasks; i++) {
+
+        }
     }
 
     free(tasks);
