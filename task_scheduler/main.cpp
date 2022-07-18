@@ -1,3 +1,5 @@
+// simple task scheduling through prioritisation on each loop
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctime>
@@ -9,13 +11,15 @@
 // 69: bad pointer assignment
 
 struct Task {
-    void (*target)();
+    void (*target)(int);
+    int pid;
     unsigned char priority; // range of 0-255, where 255 is the lowest
     unsigned long last_active;
     unsigned long preferred_rate; // optimal rate of execution, ms
 };
 
-Task * tasks;
+Task ** tasks;
+char active_tasks;
 
 void error (char * message) {
     printf("Error: %s\n", message);
@@ -30,31 +34,40 @@ void error (char * message) {
 
 }*/
 
-void dummy1 () {
-    printf("I do nothing.\n");
+void dummy1 (int var) {
+    printf("I do nothing. PID: %d\n", var);
     return;
 }
 
-int main () { // place code into loop() when finished
+int main () { // place code into setup() and loop() when finished
     
 
     { // emulate Arduino setup() ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         printf("Emulating Arduino setup()\n");
-        tasks = (Task*)malloc(INITIAL_TASKS * sizeof(Task));
+        tasks = (Task**)malloc(INITIAL_TASKS * sizeof(Task));
         if (tasks == nullptr) { printf("Bad pointer assignment.\n"); return (69); }
+
+        active_tasks = 0;
 
         printf("Emulating Arduino task setup\n");
         for (int i = 0; i < INITIAL_TASKS; i++) { // initialise first task list
-            struct Task * temp_task;
+            struct Task * temp_task = (struct Task*)malloc(sizeof(Task));
+            if (temp_task == nullptr) { printf("Bad pointer assignment.\n"); return (69); }
 
             temp_task->target = dummy1;
-            temp_task->priority = i;
+            temp_task->pid = i;
+            temp_task->priority = 0;
             temp_task->last_active = std::clock(); // set to initial clock
             temp_task->preferred_rate = 16U;
+
+            tasks[i] = temp_task; temp_task = nullptr;
+            printf("Task %d added to stack:\n", i+1);
         }
     }
-
+    printf("Emulating Arduino loop\n");
     while (1) { // emulate Arduino loop() ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        printf("Emulating Arduino loop\n");
+        
     }
+
+    free(tasks);
 }
