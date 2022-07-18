@@ -13,7 +13,7 @@
 struct Task {
     void (*target)(int); // pointer to component interface code
     int pid;
-    unsigned char priority; // range of 0-255, where 255 is the lowest and 0 is urgent - 0 will lock thread
+    unsigned char priority; // range of 0-255, where 255 is the lowest and 0 is urgent - 0 will lock thread for first encountered task
     unsigned long last_active; // last start point of component
     unsigned long preferred_rate; // optimal rate of execution, ms
     unsigned long predicted_runtime; // an estimated time, as project components have mostly fixed runtimes
@@ -80,18 +80,32 @@ int main () { // place code into setup() and loop() when finished
 
 
             tasks[i] = temp_task; temp_task = nullptr;
-            printf("Task %d added to stack:\n", i+1);
+            printf("Task %d added to list:\n", i+1);
         }
     }
     printf("Emulating Arduino loop\n");
     while (1) { // emulate Arduino loop() ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        struct Task next;
+        struct Task next = *tasks[0];
         long next_target_start = std::clock(); // desired start cycle by highest priority task
         long next_target_end = 0; // estimated end time, if matching priorities, decide by end time
+        char next_target_priority = 255;
 
         for (int i = 0; i < active_tasks; i++) {
+            struct Task * current = tasks[i];
+            // push: boolean for whether current takes precedent
+            char push = (next_target_priority - current->priority > 1) && (current->last_active+current->preferred_rate < next_target_start); // if priority is greater AND current wants to start before next task
+            /*if ((next_target_start > (current->last_active+current->preferred_rate)) && (next_target_priority > current->priority)) { // if current task's schedule lags behind (scheduled start > projected current start)
 
+            }*/
+            /*if () { // if current task's priority is more than 1 grade higher, run regardless
+
+            }*/
+            if (push) {
+                next = *current;
+            }
+            // so far - schedule task based on highest priorities
         }
+        // run highest task, update container parameters
     }
 
     free(tasks);
