@@ -5,7 +5,7 @@ MMA8452Q accel;
 int xAcceleration;
 int zAcceleration;
 
-const int xThreshold=10;
+const int xThreshold=300;//adjust as needed
 const int yThreshold=100;
 const int zThreshold=100;
 
@@ -21,12 +21,14 @@ void loop() {
   accel.read();
   // put your main code here, to run repeatedly:
   xAcceleration = accel.x; // Read in raw x-axis acceleration data
-  Serial.print("Acceleration on the x-axis is ");
-  Serial.println(xAcceleration);
-
+  //Serial.print("Acceleration on the x-axis is ");
+  //Serial.println(xAcceleration);
+  if (abs(xAcceleration) >xThreshold){
+    Serial.println("Hit from x side");
+  }
   zAcceleration = accel.cz; // Read in calculated z-axis acceleration
-  Serial.print("Acceleration on the z-axis is: ");
-  Serial.print(zAcceleration);
-  Serial.println(" g's");
+  //Serial.print("Acceleration on the z-axis is: ");
+  //Serial.print(zAcceleration);
+  //Serial.println(" g's");
 
 }
