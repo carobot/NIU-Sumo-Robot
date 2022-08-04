@@ -10,28 +10,31 @@ enum Pins {MOTOR_LA = 6, MOTOR_LD = 7, MOTOR_RA = 5, MOTOR_RD = 4, RADIO_1 = 9, 
 enum Channels {CHANNEL_A = 72, CHANNEL_B = 32, CHANNEL_C = 64, CHANNEL_D = 69};
 enum DriveMode {TANK_DRIVE, RAMP_DRIVE, DUAL_AXIS_DRIVE};
 enum Directions {BACKWARDS = 0, FORWARDS = 1};
-enum Speeds {STOP = 0, MIN = 128, MID = 200, MAX = 255};
+enum Speeds {STOP = 0, MIN = 64, MID = 128, MAX = 200, OGREDRIVE = 255};
 
 #define POLL_RATE_MS 16 // unused unless program complexity makes robot responsiveness poor
 #define PACKETSIZE 1
 #define INACTIVE_THRESHOLD 1000 // milliseconds until inactivity (1 second)
 #define TICK_LENGTH 50 // milliseconds per timed tick
+#define TURBO_DELAY 100 // delay for turbo kick in, ticks
+#define SLEEP_DELAY 60000
 
 RF24 radio(RADIO_1, RADIO_2);
 const byte address[6] = "00001";
 
 unsigned char * rf_input;
+unsigned char * prev_input;
 unsigned char * movement_vectors;
 
 // BIT FIELD ~~~~~~
 // 7: undefined ~ 128
 // 6: undefined ~ 64
-// 5: undefined ~ 32
+// 5: turbo active ~ 32
 // 4: robot hit, slowed ~ 16
 // 3: idle ~ 8
 // 2: memory error ~ 4
 // 1: signal not received ~ 2
-// 0: fatal error, exit ~ 1
+// 0: fatal uncategorised error, exit ~ 1
 
 unsigned char flags;
 
@@ -43,22 +46,44 @@ unsigned long last_transmission_clock;
 unsigned long test_clock;
 
 unsigned long last_tick;
-unsigned char tick_counter;
+unsigned long tick_counter;
+unsigned long forward_start_tick;
 
 unsigned long status;
 
-void set_speed (char left_speed, char right_speed, char left_direction, char right_direction) {
-    analogWrite(MOTOR_LA, left_speed); digitalWrite(MOTOR_LD, left_direction);
-    analogWrite(MOTOR_RA, right_speed); digitalWrite(MOTOR_RD, right_direction);
+void set_speed (char lefts, char rights, char leftd, char rightd) {
+    analogWrite(MOTOR_LA, lefts); digitalWrite(MOTOR_LD, leftd);
+
+    analogWrite(MOTOR_RA, rights); digitalWrite(MOTOR_RD, rightd);
 }
 
 void tick () {
     last_tick = millis(); // reset counter
     tick_counter++;
 
-    if (flags & 0x1 || flags & 0x4) { // fatal code error, memory or other
+    if (*prev_input == *rf_input && *rf_input == 0x44) { // ramp backwards
+        if (movement_vectors[0] < MAX) {
+            movement_vectors[0] += 1; movement_vectors[1] += 1;
+            Serial.println("Ramp back");
+        }
+            
+    // if input is forwards, and turbo is timed in
+    } else if (*rf_input == 0x88 && tick_counter - forward_start_tick >= TURBO_DELAY) {
+        movement_vectors[0] = OGREDRIVE; movement_vectors[1] = OGREDRIVE;
+    }
 
-    } else if (flags & 0x2) { // signal not received
+    // set LED statuses
+    if (flags & 0x1 || flags & 0x4 >> 2) { // fatal code error, memory or other
+
+    } else if (flags & 0x2 >> 1) { // signal not received
+ 
+    } else if (flags & 0x8 >> 3) { // robot is idle
+
+    } else if (flags & 0x16 >> 4) { // robot is hit, slowed
+
+    } else if (flags & 0x32 >> 5) { // turbo active
+
+    } else { // standard operation, no flags
 
     }
 }
@@ -66,40 +91,77 @@ void tick () {
 void loop () {
     
     if (radio.available()) { // new packet is available to be processed
-        radio.read(rf_input, PACKETSIZE);
-        Serial.println(*rf_input);
-        last_transmission_clock = millis(); // update last time used
-        unsigned char left_motor = (*rf_input & 0xF0) >> 0x4;
-        unsigned char right_motor = *rf_input & 0x0F;
-        unsigned char straight = (left_motor & 0x8 && right_motor & 0x8) || (left_motor & 0x4 && right_motor & 0x4);
-        set_speed(straight ? MAX : (left_motor == 0x0 ? 0 : MID), straight ? MAX : (right_motor == 0x0 ? 0 : MID),
-         left_motor >> 0x3, right_motor >> 0x3);
 
-        // update motor state
+        *prev_input = *rf_input;
+        radio.read(rf_input, PACKETSIZE);
+        //Serial.println(*rf_input);
+        last_transmission_clock = millis(); // update last time updated
+
+        if (*prev_input != *rf_input && *rf_input == 0x44) { // if new, updated value backs up, initialise ramp
+            Serial.println("backup");
+            movement_vectors[0] = MID; movement_vectors[1] = MID; // start at 64, gradually ramp up
+            movement_vectors[2] = BACKWARDS; movement_vectors[3] = BACKWARDS;
+
+        } else if (*prev_input != *rf_input && *rf_input == 0x88) { // if new, updated value goes forwards, set to limited speed
+            movement_vectors[0] = MAX; movement_vectors[1] = MAX;
+            movement_vectors[2] = FORWARDS; movement_vectors[3] = FORWARDS;
+            forward_start_tick = tick_counter; // set startup timer mark for turbo mode
+
+        } else if (*rf_input != 0x44 && *rf_input != 0x88) {
+            movement_vectors[0] = (*rf_input >> 0x4) ? (MID) : (STOP);
+            movement_vectors[1] = (*rf_input & 0x0F) ? (MID) : (STOP);
+
+            movement_vectors[2] = (*rf_input >> 4) & 0x8; // get direction by masking whether forward is pressed
+            movement_vectors[3] = (*rf_input & 0x0F) & 0x8;
+        }
+        
     } else { // if no signal received
-        flags |= 0x02; // set signal flag
-        if (millis() - last_transmission_clock >= INACTIVE_THRESHOLD) { // no transmission for quite some time
+        
+        if (millis() - last_transmission_clock >= INACTIVE_THRESHOLD) { // no transmission for short time
+
             set_speed (0, 0, 0, 0);
-            Serial.println("No activity from transmitter.");
-            delay(1000);
+            flags |= 0x02; // set signal flag
+
+            if (millis() - last_transmission_clock >= SLEEP_DELAY) {
+                // if inactive for extended time, enter sleep
+
+                // TODO: LED update before sleep
+                while (!radio.available()) {
+                    Serial.println("Entering low power sleep mode.");
+                    delay(10000);
+                }
+
+            
+            } else {
+                // TODO: LED flash per wait tick
+                Serial.println("No activity from transmitter.");
+                delay(1000);
+            }
+
+            
         }
     }
     
-    // send motor signals outside of receive loop to allow for ramping of speeds
-    if (!(flags & 0x02)) {
-
+    if (millis() - last_tick >= TICK_LENGTH) {
+        // TICK!
+        last_tick = millis();
+        tick_counter++;
+        //Serial.println("Tick!");
+        tick();
     }
     
-    if (last_tick + 50 >= millis()) {
-        // TICK!
-        
-    }
-    // process accelerometer input
+    // set speed per loop to allow for software modulated speed
+    set_speed(movement_vectors[0], movement_vectors[1], movement_vectors[2], movement_vectors[3]);
 }
 
 int main () {
     // setup sequence    
     init(); // i honestly don't know what this is for but it helps with the serial output
+
+    { // clear buffer
+        unsigned char temp_dump = 0;
+        radio.read(&temp_dump, PACKETSIZE);
+    }
 
     flags = 0x00;
     counter = 0uL;
@@ -115,9 +177,10 @@ int main () {
 
     // initialise global variables
     rf_input = (unsigned char*)calloc(PACKETSIZE, sizeof(unsigned char));
-    movement_vectors = (unsigned char*)calloc(2, sizeof(unsigned char));
+    prev_input = (unsigned char*)calloc(PACKETSIZE, sizeof(unsigned char));
+    movement_vectors = (unsigned char*)calloc(4, sizeof(unsigned char));
 
-    if (rf_input == nullptr || movement_vectors == nullptr) {
+    if (rf_input == nullptr || movement_vectors == nullptr || prev_input == nullptr) {
         Serial.println("Not enough memory, program will now exit.");
         flags |= 0x05;
         return(1);
@@ -145,6 +208,7 @@ int main () {
     unsigned char channel_mode = 0x0;
         
     channel_mode |= (~digitalRead(DIP_0) & 0x1); channel_mode |= (~digitalRead(DIP_1) & 0x1) << 0X1;
+    Serial.print("Channel ");
     Serial.println(channel_mode);
     switch (channel_mode & 0x3) {
         case (0x0):
@@ -163,6 +227,9 @@ int main () {
             flags |= 0x1; // something is not supposed to happen, kill code
     }
     
+    // conserve power, turn off switches after read
+    digitalWrite(DIP_0, 0); digitalWrite(DIP_1, 0);
+    digitalWrite(DIP_2, 0); digitalWrite(DIP_3, 0);
 
     while (!(flags & 0x01)) { // while no fatal error has been triggered
         loop();
