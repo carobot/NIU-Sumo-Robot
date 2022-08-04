@@ -50,9 +50,9 @@ if (axisdata[0] == HIGH) {
 if (radio.available()) {
     //Serial.println("TEST nRF24L01+ receiver");
       radio.read(&axisdata, sizeof(axisdata));
-
+      Serial.println(axisdata);
     
-
+/*
     Serial.print("Up switch: ");
   Serial.println(axisdata[0]);
   Serial.print("Down switch: ");
@@ -60,7 +60,7 @@ if (radio.available()) {
   Serial.print("Left switch: ");
   Serial.println(axisdata[2]);
   Serial.print("Right switch: ");
-  Serial.println(axisdata[3]);
+  Serial.println(axisdata[3]);*/
   
 
      /*
