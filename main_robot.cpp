@@ -2,6 +2,7 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
+#include "SparkFun_MMA8452Q.h"
 
 #include <Wire.h>
 #include <FastLED.h>
@@ -56,8 +57,11 @@ unsigned char light_brightness;
 
 unsigned char pokemon_mode;
 
+MMA8452Q accel;
+unsigned long hit_start_tick;
+
 void set_light (char lights, char brightness, CRGB colour) {
-    FastLED.setBrightness(brightness);
+    FastLED.setBrightness(brightness); // set lights on a per-bit basis based on input char mask
     for (int i = 0; i < 8; i++) {
         if ((lights & (0x1 << i)) >> i) light_array[i] = colour;
         else light_array[i] = CRGB::Black;
@@ -90,7 +94,7 @@ void tick () {
 
     // set LED statuses
     if (((flags & 0x1) || (flags & 0x4)) >> 2) { // fatal code error, memory or other
-
+        set_light(0x01, 100, CRGB::Red);
     } else if ((flags & 0x2) >> 1) { // signal not received
         if ((tick_counter + 2) % 40 == 0) {
             set_light(0x01, 50, CRGB::Green);
@@ -99,11 +103,33 @@ void tick () {
         }
     } else if ((flags & 0x8) >> 3) { // robot is idle
 
-    } else if ((flags & 0x16) >> 4) { // robot is hit, stunned
-    } else if ((flags & 0x32) >> 5) { // turbo active
+    } else if ((flags & 0x10) >> 4) { // robot is hit, stunned
+        Serial.println(tick_counter);
+        Serial.println(hit_start_tick);
+        if (tick_counter == hit_start_tick + 1) { // flash red if hit
+            set_light(0xFF, 50, CRGB::Red);
+        } else if (tick_counter >= hit_start_tick + 5) {
+            Serial.println("Reset phase");
+            switch (pokemon_mode) { // set active operation colour to pokemon shade
+                case (0x0): // pikachu or dragonite
+                    set_light(0xFF, 25, CRGB::Yellow);
+                    break;
+                case (0x1): // blastoise
+                    set_light(0xFF, 25, CRGB::DarkCyan);
+                    break;
+                case (0x2): // snorlaxative
+                    set_light(0xFF, 25, CRGB::HotPink);
+                    break;
+                case (0x3): // eevee
+                    set_light(0xFF, 25, CRGB::Chocolate);
+                    break;
+            }
+            flags &= ~0x10; // reset flags to normal operation after light flash
+        }
+    } else if ((flags & 0x20) >> 5) { // turbo active
 
     } else { // standard operation, no flags
-        switch (pokemon_mode) {
+        switch (pokemon_mode) { // set active operation colour to pokemon shade
             case (0x0): // pikachu or dragonite
                 set_light(0xFF, 25, CRGB::Yellow);
                 break;
@@ -147,7 +173,7 @@ void loop () {
         }
         
     } else { // if no signal received
-        
+
         if (millis() - last_transmission_clock >= INACTIVE_THRESHOLD) { // no transmission for short time
 
             set_speed (0, 0, 0, 0);
@@ -183,11 +209,13 @@ void loop () {
             
         }
     }
-    
+    if (accel.available() && accel.readTap() > 0) {
+        hit_start_tick = tick_counter;
+        flags |= 0x10;
+    }
     if (millis() - last_tick >= TICK_LENGTH) {
         // TICK!
         last_tick = millis();
-        tick_counter++;
         //Serial.println("Tick!");
         tick();
     }
@@ -227,6 +255,10 @@ int main () {
         Serial.println("Not enough memory, program will now exit.");
         flags |= 0x05;
         return(1);
+    }
+
+    if (!accel.begin()) {
+        Serial.println("Accelerometer not integrated.");
     }
 
     // initialise motor outputs
@@ -280,6 +312,8 @@ int main () {
     // conserve power, turn off switches after read
     digitalWrite(DIP_0, 0); digitalWrite(DIP_1, 0);
     digitalWrite(DIP_2, 0); digitalWrite(DIP_3, 0);
+
+    accel.init(SCALE_4G, ODR_50); // Initialize accelerometer with lower sensitivity
 
     FastLED.addLeds<NEOPIXEL, LED_DATA>(light_array, 6);
     
