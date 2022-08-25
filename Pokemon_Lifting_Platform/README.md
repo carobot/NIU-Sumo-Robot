@@ -1,5 +1,6 @@
 # Pokemon Lifting Platform Code
 The goal of this project was to construct a 6ft x 6ft Pokemon Arena that remote controlled robots could knock each other off of. The center of this Arena would have a 2ft x 2ft platform that would rise halfway through a game to initiate a "sudden death" where robots would be forced to knock each other off an even smaller area. The arena would also display a timer and play music.
+
 !(https://drive.google.com/file/d/1bJTZhO7z2RiypXBVa4InGJJLhpAxxTqw/view?usp=sharing)
 
 ## Arduino Code
