@@ -38,6 +38,7 @@ To control the electric jack through the relay, the relay requires a High or Low
 - A High/Low signal raises the jack
 - A Low/High signal lowers the jack
 - A High/High signal deactivates the jack
+
 An example of raising the jack in seen below (recall it is timed with a while loop to allow the mechanism to be reset):
 ```
 // Raise jack (for 15 seconds)
