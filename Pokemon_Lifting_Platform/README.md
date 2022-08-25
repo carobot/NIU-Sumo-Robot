@@ -3,7 +3,7 @@ The goal of this project was to construct a 6ft x 6ft Pokemon Arena that remote 
 
 Watch a demo here: https://drive.google.com/file/d/1vKETKIOpj_WHdc0sTdAQ7ITKu_wcn__S/view?usp=sharing
 
-A more detailed documentation of the platform's design and electronics can be found here: 
+A more detailed documentation of the platform's design and electronics can be found here: [Insert Here]
 
 ## Arduino Code
 Below is a list of the system's general mechanism in chronological order during a game:
