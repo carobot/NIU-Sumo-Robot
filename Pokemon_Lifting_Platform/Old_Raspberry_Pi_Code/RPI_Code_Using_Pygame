@@ -1,0 +1,48 @@
+import pygame
+import serial
+import time
+
+if __name__ == '__main__':
+    ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+    ser.reset_input_buffer()
+    while True:
+        if ser.in_waiting > 0:
+            line = ser.readline().decode('utf-8').rstrip()
+            if line == "activate":
+                pygame.quit()
+                pygame.init()
+                screen = pygame.display.set_mode((1920, 1080))
+                clock = pygame.time.Clock()
+                
+                counter, text = 60, '60'.rjust(3)
+                pygame.time.set_timer(pygame.USEREVENT, 1000)
+                font = pygame.font.SysFont('Consolas', 300)
+                
+                path = "/home/pi/downloads/music1"
+                pygame.mixer.init()
+                speaker_volume = 1
+                pygame.mixer.music.set_volume(speaker_volume)
+
+
+                run = True
+                while run:
+                    for e in pygame.event.get():
+                        pygame.mixer.music.load(path)
+                        pygame.mixer.music.play()
+                        time.sleep(10)
+                        if e.type == pygame.USEREVENT: 
+                            print('g')
+                            counter -= 1
+                            if counter > 0:
+                                text = str(counter).rjust(3)
+                            else:
+                                text = 'pika!'
+                                run = False
+                                
+                        if e.type == pygame.QUIT: 
+                            run = False
+
+                screen.fill((255, 0, 0))
+                screen.blit(font.render(text, True, (255, 255, 255)), (850,400))
+                pygame.display.flip()
+                clock.tick(60)
