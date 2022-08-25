@@ -1,5 +1,7 @@
 # Robot Control Code
 
+Warning: this README covers a VERY high level coarse overview of the code. For a finer breakdown, please refer to the code's comments.
+
 ![Activity diagram for main code loop](https://github.com/carobot/NIU-Sumo-Robot/blob/main/pokemon_robot/images/main_activity.png)
 
 ## Scope Requirements
