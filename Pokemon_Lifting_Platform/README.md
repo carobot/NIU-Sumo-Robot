@@ -24,7 +24,7 @@ if (digitalRead(buttonPin) == LOW){
 ```
 
 
-In order to be able to reset the platform at any point during the code, the rest of the code is included in a series of while loops that are all broken out of when the reset button is pressed. Whenever the loops are broken out of, the final code is used which lowers the platform and effectively resets the system. Each loop contains the following code to check if the reset button is pressed:
+In order to be able to reset the platform at any point during the code, the rest of the code is included in a series of while loops that are all broken out of when the reset button is pressed. Whenever the loops are broken out of, the final portion of the code is used which lowers the platform and effectively resets the system. Each loop contains the following code to check if the reset button is pressed (The reset() function just prints "reset" in the serial monitor):
 ```
 // Check for reset
 if (digitalRead(resetPin) == LOW){
@@ -32,7 +32,6 @@ reset();
 break; 
 }
 ```
-The reset() function just prints "reset" in the serial monitor. 
 
 To control the electric jack through the relay, the relay requires a High or Low signal to relay switch 1 and 2.
 - A High/Low signal raises the jack
@@ -56,6 +55,7 @@ An example of raising the jack in seen below (recall it is timed with a while lo
         delay(1);
       }
 ```
+
 These basic principles are repeated to raise and lower the platform as needed in the mechanism.
 
 
