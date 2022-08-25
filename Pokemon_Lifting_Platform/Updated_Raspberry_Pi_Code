@@ -12,7 +12,7 @@ if __name__ == '__main__':
             if line == "activate":
 
                 pygame.init()
-                video = VideoFileClip('timer1.mp4')
+                video = VideoFileClip('/home/pi/downloads/timer1.mp4')
                 video.preview()
 
                 pygame.quit()
