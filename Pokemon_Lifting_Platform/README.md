@@ -5,7 +5,7 @@ This code controls the Pokemon game timer and music. It also raises and lowers a
 Below is a list of the system's general mechanism in chronological order during a game:
 - An arduino will receive an input from a button to begin the mechanism
 - The arduino will send a signal to the raspberry pi to begin its functions (After an audio countdown, the 60 second game timer and game music begin. This code is in the Raspberry Pi code section)
-- At 30 seconds left, the arduino will extend the electric jack upwards for 15 seconds by controlling its motor through a relay. This middle 2x2 platform will remain here for 15 seconds until the timer reaches 0 seconds left.
+- At 30 seconds left, the arduino will extend the electric jack (and the 2x2 platform on it) upwards for 15 seconds by controlling its motor through a relay. This middle platform will remain here for 15 seconds until the timer reaches 0 seconds left.
 - A joystick can be used to manually raise and lower the platform once it is fully raised.
 - At 0 seconds, the middle platform will lower until it’s flush with the rest of the 6x6 platform
 
@@ -60,3 +60,28 @@ These basic principles are repeated to raise and lower the platform as needed in
 
 
 ## Raspberry Pi Code
+This is not the code originally used to display a timer and play music (the original can be found in the old raspberry pi code folder). It has been greatly simplified and updated to play an mp4 file of the timer and music using the moviepy and pygame libraries. The mp4 file can be found here: 
+https://drive.google.com/file/d/1cD2DQEMQYrCH2XB90sjX_IaXBVr2EDr2/view?usp=sharing
+
+#### Code Explanation
+The arduino is in serial connection with the raspberry pi, and as such can send it a signal with the Serial.print() command. The raspberry pi’s code is written on python, and establishes serial communication with the arduino using the serial library. This connection is estabilished in the following part of the code:
+```
+if __name__ == '__main__':
+    ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+    ser.reset_input_buffer()
+    while True:
+```
+
+The code then continuously checks if the arduino sends the signal "activate" (this was written in the arduino code):
+```
+ while True:
+        if ser.in_waiting > 0:
+            line = ser.readline().decode('utf-8').rstrip()
+            if line == "activate":
+```
+
+Once this signal is read, the code uses the moviepy and pygame libraries to play the mp4 file:
+```
+video = VideoFileClip('/home/pi/downloads/timer1.mp4')
+video.preview()
+```
