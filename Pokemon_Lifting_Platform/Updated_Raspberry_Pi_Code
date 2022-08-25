@@ -1,4 +1,7 @@
 import serial
+import pygame
+import moviepy
+from moviepy.editor import *
 
 if __name__ == '__main__':
     ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
@@ -7,5 +10,9 @@ if __name__ == '__main__':
         if ser.in_waiting > 0:
             line = ser.readline().decode('utf-8').rstrip()
             if line == "activate":
-                
-                
+
+                pygame.init()
+                video = VideoFileClip('timer1.mp4')
+                video.preview()
+
+                pygame.quit()
