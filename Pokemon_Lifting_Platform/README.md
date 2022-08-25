@@ -3,7 +3,7 @@ The goal of this project was to construct a 6ft x 6ft Pokemon Arena that remote 
 
 Watch a demo here: https://drive.google.com/file/d/1vKETKIOpj_WHdc0sTdAQ7ITKu_wcn__S/view?usp=sharing
 
-A more detailed documentation of the platform's design and electronics can be found here: [Insert Here]
+A more detailed documentation of the platform's electronics can be found here: [Insert Here]
 
 ## Arduino Code
 Below is a list of the system's general mechanism in chronological order during a game:
@@ -28,7 +28,7 @@ if (digitalRead(buttonPin) == LOW){
 ```
 
 
-In order to be able to reset the platform at any point during the code, the rest of the code is included in a series of while loops that are all broken out of when the reset button is pressed. Whenever the loops are broken out of, the final portion of the code is used which lowers the platform and effectively resets the system. Each loop contains the following code to check if the reset button is pressed (The reset() function just prints "reset" in the serial monitor):
+In order to be able to reset the platform at any point during the code, the rest of the code is included in a series of while loops that are all broken out of when the reset button is pressed. Whenever the loops are broken out of, the final portion of the code is used which lowers the platform and effectively resets the system. This means another game cannot be started for 30 seconds after it is reset, as the platform is set to lower during this time. Each loop contains the following code to check if the reset button is pressed (The reset() function just prints "reset" in the serial monitor):
 ```
 // Check for reset
 if (digitalRead(resetPin) == LOW){
